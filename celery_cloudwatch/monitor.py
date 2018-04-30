@@ -270,12 +270,7 @@ def main(app=None):
     }
 
     # set up the boto3/cloudwatch client
-    ec2 = boto3.client('ec2', **aws_config)
     cloudwatch = boto3.client('logs', **aws_config)
-
-    # make sure we're succesfully authenticated by making
-    # a dumy call to describe_regions()
-    ec2.describe_regions()
 
     # make sure the cloudwatch log group exists
     try:
