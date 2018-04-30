@@ -1,4 +1,4 @@
-from datetime import datetime
+import time
 import json
 import logging
 import os
@@ -50,16 +50,17 @@ def get_sequence_token(cloudwatch, log_group, log_stream):
     return token
 
 
-def get_timestamp_utc():
-    """Gets the current date/time in UTC neutral
-    timestamp, formatted as the amount of milliseconds
+def get_timestamp():
+    """Gets the current date/time as a timestamp,
+    formatted as the amount of milliseconds
     that passed since January 1, 1970 (unix epoch).
+    NOTE: This is currently based on the server's time
 
     Returns:
         The current time as timestamp.
     """
 
-    return int(datetime.utcnow().strftime('%s')) * 1000
+    return int(time.time() * 1000)
 
 
 def upload_log_event(cloudwatch, log_group, log_stream, data):
@@ -88,7 +89,7 @@ def upload_log_event(cloudwatch, log_group, log_stream, data):
         'logGroupName': log_group,
         'logStreamName': log_stream,
         'logEvents': [{
-            'timestamp': get_timestamp_utc(),
+            'timestamp': get_timestamp(),
             'message': json.dumps(data)
         }],
     }
@@ -196,7 +197,7 @@ def monitor(app, cloudwatch, streams):
                     'name': task.name,
                     'args': task.args,
                     'kwargs': task.kwargs,
-                    'event': event
+                    'event': event,
                 }
             )
 
@@ -219,7 +220,7 @@ def monitor(app, cloudwatch, streams):
         recv.capture(limit=None, timeout=None, wakeup=True)
 
 
-def main():
+def main(app=None):
     # set up logging, make sure to only show critical errors
     # from third-party packages
     logging.basicConfig(level=logging.INFO)
@@ -238,8 +239,9 @@ def main():
     broker_url = os.environ.get('REDIS_URL', 'redis://')
 
     # set up the celery application
-    app = Celery(broker=broker_url)
-    LOGGER.info('Connected to broker at %s', broker_url)
+    if not app:
+        app = Celery(broker=broker_url)
+        LOGGER.info('Connected to broker at %s', broker_url)
 
     # acquire the AWS configuration, if AWS_CLOUDWATCH_ACCESS_KEY
     # and/or AWS_CLOUDWATCH_SECRET_KEY are not set, Boto should
@@ -264,7 +266,7 @@ def main():
         'task-succeeded': (aws_log_group, 'success'),
         'task-retried': (aws_log_group, 'retry'),
         'task-revoked': (aws_log_group, 'revoke'),
-        'task-rejected': (aws_log_group, 'reject')
+        'task-rejected': (aws_log_group, 'reject'),
     }
 
     # set up the boto3/cloudwatch client
