@@ -163,6 +163,9 @@ def monitor(app, cloudwatch, streams):
         of the task. In order to retrieve a task's name
         for other events, we must have recorded the
         'task-received' event.
+
+        NOTE: We're currently not using this as we're
+        also using task-received as a stream
         """
 
         LOGGER.debug('Received \'%s\' - %s', event['type'], str(event))
@@ -207,8 +210,11 @@ def monitor(app, cloudwatch, streams):
         # we must intercept the task-received event, but not
         # log about it because without it, we wouldn't be able
         # to retrieve the task name later
+
+        # NOTE: we're also capturing task received as a stream,
+        # so commenting out the on_task_received handler
         handlers = {
-            'task-received': on_task_received
+            # 'task-received': on_task_received
         }
 
         # define handlers for all user-defined log streams
@@ -267,6 +273,7 @@ def main(app=None):
         'task-retried': (aws_log_group, 'retry'),
         'task-revoked': (aws_log_group, 'revoke'),
         'task-rejected': (aws_log_group, 'reject'),
+        'task-received': (aws_log_group, 'receive'),
     }
 
     # set up the boto3/cloudwatch client
